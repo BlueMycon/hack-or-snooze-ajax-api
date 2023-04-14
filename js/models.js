@@ -24,8 +24,11 @@ class Story {
   /** Parses hostname out of URL and returns it. */
 
   getHostName() {
-    // UNIMPLEMENTED: complete this function!
-    return "hostname.com";
+    // use RegEx, or....loop through string until third '/' or end of string
+    // TODO: look into MDN doc for URL objects in JS
+    const reMatch = this.url.match(/(https?:\/\/(www\.)?[^\/]+)/);
+    if (reMatch) return reMatch[0];
+    return "hostname";
   }
 }
 
@@ -81,10 +84,10 @@ class StoryList {
       data: { token: user.loginToken, story: newStory },
     });
 
-    // Question: what if response.data.story !== newStory?
     const story = new Story(response.data.story);
 
     this.stories.unshift(story);
+
     user.ownStories.unshift(story);
 
     return story;
@@ -205,5 +208,38 @@ class User {
       console.error("loginViaStoredCredentials failed", err);
       return null;
     }
+  }
+
+  /** Let user favorite a story
+   * - story: an instance of Story
+  */
+  async addFavorite(story) {
+    const response = await axios({
+      url: `${BASE_URL}/users/${this.username}/favorites/${story.storyId}`,
+      method: "POST",
+      data: { token: this.loginToken },
+    });
+
+    this.favorites.push(new Story(story));
+
+    // FIXME: what do I want to return here?
+    return response.data;
+  }
+
+  /** Let user unfavorite a story
+   * - story: an instance of Story
+  */
+
+  async removeFavorite(story) {
+    const response = await axios({
+      url: `${BASE_URL}/users/${this.username}/favorites/${story.storyId}`,
+      method: "DELETE",
+      data: { token: this.loginToken },
+    });
+
+    this.favorites = this.favorites.filter(s => s.storyId !== story.storyId);
+
+    // FIXME: what do I want to return here?
+    return response.data;
   }
 }
