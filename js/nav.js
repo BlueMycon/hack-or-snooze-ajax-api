@@ -6,6 +6,8 @@
 
 /** Show main list of all stories when click site name */
 
+$(".nav-link").on("click", (evt) => $navLinkLastClicked = $(evt.target));
+
 function navAllStories(evt) {
   console.debug("navAllStories", evt);
   evt.preventDefault();

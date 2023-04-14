@@ -1,9 +1,11 @@
 "use strict";
 
-// This is the global list of the stories, an instance of StoryList
+// This is the global list of the stories,
+// an instance of StoryList
 let storyList;
 
-/** Get and show stories when site first loads. */
+/** Get and show stories when site first loads.*
+ */
 
 async function getAndShowStoriesOnStart() {
   storyList = await StoryList.getStories();
@@ -20,15 +22,22 @@ async function getAndShowStoriesOnStart() {
  */
 
 function generateStoryMarkup(story) {
-  console.debug("generateStoryMarkup", story);
+  // console.debug("generateStoryMarkup", story);
   // want to only show <i> if logged in
   const storyIsFavorited = currentUser?.favorites.find(s => s.storyId === story.storyId)
   const starStyle = storyIsFavorited ? "-fill" : "";
 
+  // trash icon, conditional on closest <ol> being #my-stories-list
+  // TODO: what I would prefer is to pass the event.target
+  // because the event target is the nav-link that determines these boolean switches
+  const isViewingMyStories = $navLinkLastClicked ? $navLinkLastClicked.attr("id") === "nav-my-stories": false;
+
   const hostName = story.getHostName();
+
   return $(`
       <li id="${story.storyId}">
-        ${currentUser ? `<i class="bi bi-star${starStyle} star"></i>` : ""}
+        ${isViewingMyStories ? `<small><i class="bi bi-trash trash"></i></small>` : ""}
+        ${currentUser ? `<small><i class="bi bi-star${starStyle} star"></i></small>` : ""}
         <a href="${story.url}" target="a_blank" class="story-link">
           ${story.title}
         </a>
@@ -39,7 +48,10 @@ function generateStoryMarkup(story) {
     `);
 }
 
-/** Gets list of stories from server, generates their HTML, and puts on page. */
+/** Gets list of stories from server,
+ * generates their HTML,
+ * and puts on page.
+ */
 
 function putStoriesOnPage() {
   console.debug("putStoriesOnPage");
@@ -61,7 +73,6 @@ function putFavoritesOnPage() {
   $userFavoritesList.empty();
 
   // loop through all user storeis and generate HTML for them
-  // FIXME: currentUser.favorites should be array of Story instances
   for (let story of currentUser.favorites) {
     const $favStory = generateStoryMarkup(story);
     $userFavoritesList.append($favStory);
@@ -113,7 +124,6 @@ async function submitNewStory(evt) {
 
 $submitStoryForm.on("submit", submitNewStory);
 
-// FIXME: is this the right JavaScript file for this function?
 async function getStory(storyId) {
   const response =  await axios({
     url: `${BASE_URL}/stories/${storyId}`,
@@ -141,9 +151,6 @@ async function toggleStoryFavorite(evt) {
     $evtTargetStar.toggleClass("bi-star bi-star-fill");
   } else {
     // removeFav, change style
-
-    // FIXME: throws error when favorite is for a story that has been
-    // pushed off the 25 item storyList
     await currentUser.removeFavorite(story);
     $evtTargetStar.toggleClass("bi-star bi-star-fill");
 
@@ -154,6 +161,29 @@ async function toggleStoryFavorite(evt) {
   }
 }
 
+// FIXME: gratuitious; try delegating via <body>?
 $allStoriesList.on("click", ".star", toggleStoryFavorite);
 $userFavoritesList.on("click", ".star", toggleStoryFavorite);
 $myStoriesList.on("click",".star", toggleStoryFavorite);
+
+// FIXME: trash does not dynamically remove story from  $allStoriesList or $userFavoritesList
+// this should not require a refresh; no ghosts
+async function removeMyStory(evt) {
+  evt.preventDefault();
+
+  const $evtTargetTrashIcon = $(evt.target);
+  const storyId = $evtTargetTrashIcon.closest("li").attr("id");
+  const story = await getStory(storyId);
+
+  // remove this from stories on backend
+  // remove from active memory
+  // remove form user's own stories
+  // get confirmation of removals
+  const message = await storyList.removeStory(currentUser, story);
+  console.log("message=", message);
+  // remove from HTML surgically, do not repaint entire story list
+  $evtTargetTrashIcon.closest("li").remove();
+}
+
+// listener for trash, only on myStories
+$myStoriesList.on("click",".trash", removeMyStory);

@@ -19,6 +19,7 @@ const $navLeft = $(".nav-left");
 const $navSubmitStory = $("#nav-submit-story");
 const $navFavorites = $("#nav-favorites");
 const $navMyStories = $("#nav-my-stories");
+let $navLinkLastClicked;
 
 const $submitStoryForm = $("#submit-story-form");
 

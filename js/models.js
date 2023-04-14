@@ -26,6 +26,9 @@ class Story {
   getHostName() {
     // use RegEx, or....loop through string until third '/' or end of string
     // TODO: look into MDN doc for URL objects in JS
+    const jsURL = new URL(this.url);
+    return jsURL.hostname || "hostname";
+
     const reMatch = this.url.match(/(https?:\/\/(www\.)?[^\/]+)/);
     if (reMatch) return reMatch[0];
     return "hostname";
@@ -88,9 +91,35 @@ class StoryList {
 
     this.stories.unshift(story);
 
+    // FIXME: the user itself should be doing this as a method
+    // perhaps a controller should speak to both StoryList and User to tell them these commands
     user.ownStories.unshift(story);
 
     return story;
+  }
+
+  async removeStory(user, story) {
+    const response = await axios({
+      url: `${BASE_URL}/stories/${story.storyId}`,
+      method: "DELETE",
+      data: { token: user.loginToken },
+    });
+
+    const storyId = response.data.story.storyId;
+
+    console.log("this.stories before=", this.stories);
+    const indexToRemove = this.stories.findIndex(s => s.storyId === storyId);
+    this.stories.slice(indexToRemove, 1);
+    console.log("this.stories after=", this.stories);
+
+    // FIXME: the user itself should be doing this as a method
+    // perhaps a controller should speak to both StoryList and User to tell them these commands
+    console.log("user.ownStories before=", user.ownStories);
+    const ownStoriesIndexToRemove = user.ownStories.findIndex(s => s.storyId === storyId);
+    user.ownStories.slice(ownStoriesIndexToRemove, 1);
+    console.log("user.ownStories after=", user.ownStories);
+
+    return response.data.message;
   }
 }
 
@@ -220,7 +249,7 @@ class User {
       data: { token: this.loginToken },
     });
 
-    this.favorites.push(new Story(story));
+    this.favorites.unshift(new Story(story));
 
     // FIXME: what do I want to return here?
     return response.data;
